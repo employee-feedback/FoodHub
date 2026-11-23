@@ -21,11 +21,13 @@ Al terminar tendrás:
 Con la cuenta de FoodHub, en <https://console.cloud.google.com>:
 
 1. Crea un proyecto nuevo llamado `FoodHub`.
-2. Ve a **APIs y servicios > Pantalla de consentimiento de OAuth** (o **Google Auth Platform**):
-   - Tipo de usuario: **Externo**.
-   - Nombre de la app: `FoodHub`. Correo de asistencia: el de FoodHub.
+2. Ve a **APIs y servicios > Pantalla de consentimiento de OAuth**. Se abre un asistente de 4 pasos:
+   1. **Información de la app**: nombre `FoodHub`, correo de asistencia el de FoodHub. **Siguiente**.
+   2. **Público**: elige **Externo**. **Siguiente**.
+   3. **Información de contacto**: el correo de FoodHub. **Siguiente**.
+   4. **Finalizar**: acepta la política y pulsa **Crear**.
    - No agregues permisos extra; basta con los básicos (correo y perfil).
-   - Al terminar, en **Público**, cambia el estado a **En producción**. Con solo correo y perfil no hace falta que Google la verifique.
+   - Después, en el menú **Público**, pulsa **Publicar app** para que quede **En producción**. Con solo correo y perfil no hace falta que Google la verifique.
 3. Ve a **Credenciales > Crear credenciales > ID de cliente de OAuth**:
    - Tipo: **Aplicación web**. Nombre: `FoodHub web`.
    - **Orígenes de JavaScript autorizados**: `https://TU_USUARIO.github.io` (sin la ruta del repositorio y sin `/` final).
