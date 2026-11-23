@@ -16,14 +16,14 @@
 
   // ---------------- arranque ----------------
   function start() {
-    if (/PEGAR_AQUI/.test(CFG.API_URL + CFG.GOOGLE_CLIENT_ID)) {
-      root('<div class="login"><div class="card"><b style="font-size:20px">FoodHub</b><p class="err">Falta configurar API_URL y GOOGLE_CLIENT_ID en config.js.</p><p class="muted">Sigue la guía de instalación, sección 5.</p></div></div>');
+    if (/PEGAR_AQUI/.test(CFG.API_URL)) {
+      root('<div class="login"><div class="card"><b style="font-size:20px">FoodHub</b><p class="err">Falta configurar API_URL en config.js.</p><p class="muted">Sigue la guía de instalación.</p></div></div>');
       return;
     }
     var s = FH.Session.get();
     if (!s) return showLogin();
     root('<div class="loading">Verificando tu sesión…</div>');
-    FH.call('auth.me').then(function (me) { S.me = me; if (s.compartido) armIdle(); return loadCatalog(); })
+    FH.call('auth.me').then(function (me) { S.me = me; return loadCatalog(); })
       .then(render).catch(function (e) { showLogin(e.code === 'AUTH' ? e.message : 'No se pudo verificar la sesión: ' + e.message); });
   }
 
@@ -32,54 +32,68 @@
   window.addEventListener('fh:logout', function (e) { S.me = null; showLogin(e.detail); });
   window.addEventListener('hashchange', function () { if (S.me) render(); });
 
-  // ---------------- inicio de sesión ----------------
-  function showLogin(msg) {
+  // ---------------- inicio de sesión (código por correo, como TalentHub) ----------------
+  var L = { correo: '' };
+  function loginShell(inner, msg) {
     root('<div class="login"><div class="card">' +
       '<div><b style="font-size:20px">FoodHub</b><p class="muted" style="margin:4px 0 0">Evaluación y seguimiento del concesionario de comedor</p></div>' +
-      (msg ? '<p class="err" role="alert" style="margin:0">' + esc(msg) + '</p>' : '') +
-      '<label class="row" style="flex-wrap:nowrap;align-items:flex-start"><input id="l-sh" type="checkbox" style="margin-top:3px"><span><b>Equipo compartido</b> (tablet de la planta)<br><span class="muted">La sesión se cierra tras ' + CFG.SHARED_IDLE_MIN + ' minutos sin uso o al cerrar el navegador. Sin marcar, dura 30 días.</span></span></label>' +
-      '<div id="gbtn"></div><p id="l-st" class="muted" style="margin:0"></p>' +
+      (msg ? '<p class="err" role="alert" style="margin:0">' + esc(msg) + '</p>' : '') + inner +
       '<p class="muted" style="margin:0;font-size:12.5px">Solo pueden entrar los correos dados de alta por el administrador. El concesionario no usa esta pantalla: responde desde el enlace que recibe por correo.</p>' +
       '</div></div>');
-    waitGoogle(function () {
-      google.accounts.id.initialize({ client_id: CFG.GOOGLE_CLIENT_ID, callback: onGoogle, auto_select: false, cancel_on_tap_outside: true });
-      google.accounts.id.renderButton($('#gbtn'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es', width: 320 });
-    });
   }
-  function waitGoogle(fn, n) {
-    if (window.google && google.accounts && google.accounts.id) return fn();
-    if ((n || 0) > 100) { var st = $('#l-st'); if (st) st.textContent = 'No cargó el inicio de sesión de Google. Revisa tu conexión o desactiva bloqueadores.'; return; }
-    setTimeout(function () { waitGoogle(fn, (n || 0) + 1); }, 100);
+  function showLogin(msg) {
+    loginShell('<form id="l-f1" style="display:flex;flex-direction:column;gap:10px" novalidate>' +
+      '<label class="lbl" for="l-em">Tu correo</label>' +
+      '<input id="l-em" type="email" autocomplete="email" inputmode="email" placeholder="nombre@teleflex.com" value="' + esc(L.correo) + '" required>' +
+      '<button class="btn pri" id="l-send" type="submit">Enviarme un código</button>' +
+      '<p id="l-st" class="muted" style="margin:0"></p></form>', msg);
+    var em = $('#l-em'); em.focus();
+    $('#l-f1').onsubmit = function (e) {
+      e.preventDefault();
+      var c = em.value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c)) { $('#l-st').textContent = 'Escribe un correo válido.'; return; }
+      $('#l-send').disabled = true; $('#l-st').textContent = 'Enviando…';
+      FH.call('auth.requestCode', { correo: c })
+        .then(function (d) { L.correo = c; showCode(d.mensaje); })
+        .catch(function (err) { $('#l-send').disabled = false; $('#l-st').textContent = err.message; });
+    };
   }
-  function onGoogle(resp) {
-    var shared = !!($('#l-sh') && $('#l-sh').checked);
-    $('#l-st').textContent = 'Validando acceso…';
-    FH.call('auth.login', { idToken: resp.credential, compartido: shared, dispositivo: navigator.userAgent.slice(0, 120) })
-      .then(function (d) {
-        FH.Session.set({ session: d.session, vence: d.vence, compartido: d.compartido });
-        S.me = d.me; if (d.compartido) armIdle();
-        return loadCatalog();
-      })
-      .then(function () { if (!location.hash) location.hash = 'inicio'; render(); })
-      .catch(function (e) { showLogin(e.message); });
+  function showCode(info, msg) {
+    loginShell('<form id="l-f2" style="display:flex;flex-direction:column;gap:10px" novalidate>' +
+      '<p style="margin:0">' + esc(info || '') + '</p>' +
+      '<p class="muted" style="margin:0">Correo: <b>' + esc(L.correo) + '</b></p>' +
+      '<label class="lbl" for="l-co">Código de 6 dígitos</label>' +
+      '<input id="l-co" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" style="font-size:22px;letter-spacing:6px;text-align:center">' +
+      '<label class="row" style="flex-wrap:nowrap;align-items:flex-start"><input id="l-re" type="checkbox" checked style="margin-top:3px"><span><b>Recordar este equipo 30 días</b><br><span class="muted">Desmárcalo en la tablet compartida: así la sesión dura 6 horas y se borra al cerrar el navegador.</span></span></label>' +
+      '<button class="btn pri" id="l-go" type="submit">Entrar</button>' +
+      '<p id="l-st" class="muted" style="margin:0"></p>' +
+      '<a href="#" id="l-back" style="font-size:13px">Usar otro correo o pedir un código nuevo</a></form>', msg);
+    var co = $('#l-co'); co.focus();
+    co.oninput = function () { co.value = co.value.replace(/\D/g, '').slice(0, 6); };
+    $('#l-back').onclick = function (e) { e.preventDefault(); showLogin(); };
+    $('#l-f2').onsubmit = function (e) {
+      e.preventDefault();
+      if (!/^\d{6}$/.test(co.value)) { $('#l-st').textContent = 'El código tiene 6 números.'; return; }
+      var recordar = $('#l-re').checked;
+      $('#l-go').disabled = true; $('#l-st').textContent = 'Validando…';
+      FH.call('auth.verifyCode', { correo: L.correo, codigo: co.value, recordar: recordar, dispositivo: navigator.userAgent.slice(0, 120) })
+        .then(function (d) {
+          FH.Session.set({ session: d.session, vence: d.vence, recordar: d.recordar });
+          S.me = d.me;
+          return loadCatalog();
+        })
+        .then(function () { if (!location.hash) location.hash = 'inicio'; render(); })
+        .catch(function (err) {
+          if (S.me) return showLogin(err.message);
+          $('#l-go').disabled = false; $('#l-st').textContent = err.message; co.value = ''; co.focus();
+        });
+    };
   }
   function logout() {
     FH.call('auth.logout').catch(function () {}).then(function () {
       FH.Session.clear(); S.me = null;
-      if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
       showLogin('Cerraste sesión.');
     });
-  }
-
-  // Equipo compartido: además del control del servidor, se cierra en el navegador tras el tiempo sin uso.
-  var idleTimer = null;
-  function armIdle() {
-    var reset = function () {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(function () { FH.Session.clear(); S.me = null; showLogin('La sesión se cerró por ' + CFG.SHARED_IDLE_MIN + ' minutos sin uso.'); }, CFG.SHARED_IDLE_MIN * 60000);
-    };
-    ['click', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { window.addEventListener(ev, reset, { passive: true }); });
-    reset();
   }
 
   // ---------------- estructura ----------------
@@ -91,7 +105,7 @@
     var s = FH.Session.get() || {};
     root('<div class="app"><aside class="side"><div class="brand"><b>FoodHub</b><span>Evaluación del comedor</span></div><nav class="nav">' +
       nav.map(function (n, i) { return '<a href="#' + n[0] + '" class="' + (v === n[0] ? 'on' : '') + '"><span class="n">' + (i + 1) + '</span>' + n[1] + '</a>'; }).join('') +
-      '</nav><div class="foot">' + esc(S.me.nombre || S.me.correo) + '<br>' + esc(S.me.rol_nombre) + ' · ' + (s.compartido ? 'equipo compartido' : 'sesión de 30 días') +
+      '</nav><div class="foot">' + esc(S.me.nombre || S.me.correo) + '<br>' + esc(S.me.rol_nombre) + ' · ' + (s.recordar ? 'equipo recordado 30 días' : 'sesión de 6 horas') +
       '<br><a href="#" id="logout" style="color:inherit">Cerrar sesión</a></div></aside>' +
       '<div class="main"><div class="top"><div class="demo"><span class="muted">' + esc(plantsLabel()) + '</span></div><div class="demo"><span class="tag">v0.4 · Fase 4</span></div></div>' +
       '<div class="content" id="view"></div></div></div>');

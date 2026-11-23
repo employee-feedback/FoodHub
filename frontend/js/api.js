@@ -4,8 +4,8 @@
   var CFG = window.FOODHUB_CONFIG;
   var KEY = 'fh_session';
 
-  // Escritorio: localStorage (30 días). Equipo compartido: sessionStorage (se borra al cerrar el navegador).
-  function store(shared) { return shared ? window.sessionStorage : window.localStorage; }
+  // "Recordar este equipo": localStorage (30 días). Sin recordar: sessionStorage (se borra al cerrar el navegador).
+  function store(recordar) { return recordar ? window.localStorage : window.sessionStorage; }
   function safe(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
 
   var Session = {
@@ -15,7 +15,7 @@
     },
     set: function (s) {
       this.clear();
-      safe(function () { store(s.compartido).setItem(KEY, JSON.stringify(s)); });
+      safe(function () { store(s.recordar).setItem(KEY, JSON.stringify(s)); });
     },
     clear: function () {
       safe(function () { sessionStorage.removeItem(KEY); });

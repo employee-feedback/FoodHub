@@ -50,7 +50,8 @@ function makeBook(name) {
 
 const props = {};
 const cache = {};
-const tokens = {}; // id_token simulado -> payload de Google
+const mails = [];   // correos enviados
+const mailQuota = { n: 100 };
 const ctx = {
   Date: FakeDate, JSON, Math, console: { log() {}, error() {} }, String, Number, Object, Array, RegExp, Error,
   SpreadsheetApp: { create: makeBook, openById: id => books[id] },
@@ -69,11 +70,10 @@ const ctx = {
     base64EncodeWebSafe: bytes => Buffer.from(bytes.map(b => b & 0xff)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
     formatDate: d => new RealDate(d.getTime() - 6 * 3600e3).toISOString().slice(0, 19) + '-06:00'
   },
-  UrlFetchApp: { fetch: url => {
-    const t = decodeURIComponent(url.split('id_token=')[1]);
-    const p = tokens[t];
-    return { getResponseCode: () => (p ? 200 : 400), getContentText: () => JSON.stringify(p || { error: 'invalid_token' }) };
-  } },
+  MailApp: {
+    getRemainingDailyQuota: () => mailQuota.n,
+    sendEmail: o => { mailQuota.n--; mails.push(o); }
+  },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ content: s, setMimeType() { return this; } }) }
 };
 vm.createContext(ctx);
@@ -83,13 +83,13 @@ for (const f of ['Config.gs', 'Schema.gs', 'Db.gs', 'Auth.gs', 'Bitacora.gs', 'A
 }
 
 
-const google = (email, extra = {}) => {
-  const t = 'tok_' + crypto.randomUUID();
-  tokens[t] = Object.assign({ iss: 'https://accounts.google.com', aud: 'client-123', email, email_verified: 'true', exp: String(Math.floor(FakeDate.now() / 1000) + 3600), name: 'Prueba' }, extra);
-  return t;
+/** Último código enviado a un correo (lo que la persona leería en su bandeja). */
+const codeFor = email => {
+  const m = mails.filter(x => x.to === email.toLowerCase()).pop();
+  return m ? /es (\d{6})/.exec(m.subject)[1] : null;
 };
 function post(body) {
   vm.runInContext('DB_CACHE_ = {main: DB_CACHE_.main, log: DB_CACHE_.log}', ctx);
   return ctx.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).content;
 }
-module.exports = { ctx, vm, books, props, cache, tokens, google, post, advance: ms => { clockOffset += ms; } };
+module.exports = { ctx, vm, books, props, cache, mails, mailQuota, codeFor, post, advance: ms => { clockOffset += ms; } };

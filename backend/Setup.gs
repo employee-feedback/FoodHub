@@ -38,7 +38,6 @@ function setup() {
     report.push('Administrador creado: ' + admin);
   }
   if (!admin) report.push('AVISO: no hay ADMIN_EMAIL; agrega la propiedad y vuelve a ejecutar setup().');
-  if (!props.getProperty('GOOGLE_CLIENT_ID')) report.push('AVISO: falta GOOGLE_CLIENT_ID; el inicio de sesión no funcionará.');
 
   CacheService.getScriptCache().removeAll(Object.keys(SEED).concat(Object.keys(SCHEMA)).map(function (n) { return 'tbl:' + n; }));
   report.unshift('Base de datos: ' + main.getUrl(), 'Bitácora: ' + log.getUrl());

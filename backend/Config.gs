@@ -2,7 +2,6 @@
  * FoodHub — configuración general del backend.
  *
  * Propiedades del Script (Proyecto > Configuración > Propiedades del script):
- *   GOOGLE_CLIENT_ID   ID de cliente OAuth (tipo "Aplicación web") usado por el frontend.
  *   ADMIN_EMAIL        Correo del primer administrador; solo lo usa setup().
  *   DB_ID              ID de la hoja de cálculo principal (lo escribe setup()).
  *   LOG_ID             ID de la hoja de bitácora (lo escribe setup()).
@@ -12,11 +11,13 @@
 
 var APP = {
   NAME: 'FoodHub',
-  VERSION: '0.4.0',
+  VERSION: '0.4.1',
   TZ: 'America/Chihuahua',
-  SESSION_DAYS_DESKTOP: 30,
-  SESSION_SHARED_IDLE_SEC: 600,       // 10 minutos sin uso en equipo compartido (aprobado)
-  SESSION_SHARED_MAX_HOURS: 12,       // tope absoluto de una sesión de tablet
+  SESSION_REMEMBER_DAYS: 30,          // "Recordar este equipo" (como TalentHub)
+  SESSION_HOURS: 6,                   // sin recordar, por ejemplo la tablet compartida
+  CODE_MINUTES: 10,                   // vigencia del código enviado por correo
+  CODE_ATTEMPTS: 5,                   // intentos antes de pedir otro código
+  CODES_PER_HOUR: 5,                  // códigos por correo en una hora
   CACHE_USERS_SEC: 60,
   CACHE_CATALOG_SEC: 300,
   CACHE_SESSION_SEC: 21600,           // 6 h (máximo de CacheService)

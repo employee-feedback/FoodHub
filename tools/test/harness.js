@@ -7,7 +7,7 @@
  */
 const crypto = require('crypto');
 const sim = require('./gas-sim');
-const { ctx, vm, books, props, cache, google } = sim;
+const { ctx, vm, books, props, cache, mails, mailQuota, codeFor } = sim;
 const advance = sim.advance;
 // ---------- utilidades de prueba ----------
 let pass = 0, fail = 0;
@@ -18,11 +18,15 @@ function call(action, payload, session, requestId) {
   return JSON.parse(sim.post({ action, payload, session, requestId }));
 }
 const rid = () => crypto.randomUUID();
+/** Pide el código, lo toma del correo y entra. */
+function login(email, recordar) {
+  call('auth.requestCode', { correo: email });
+  return call('auth.verifyCode', { correo: email, codigo: codeFor(email), recordar });
+}
 
 
 // ---------- pruebas ----------
 console.log('Instalación');
-props.GOOGLE_CLIENT_ID = 'client-123';
 props.ADMIN_EMAIL = 'admin@ejemplo.com';
 const rep = vm.runInContext('setup()', ctx);
 check('setup crea la base y el administrador', rep.some(l => l.includes('Administrador creado')), rep);
@@ -34,14 +38,21 @@ check('PEPPER generado', (props.PEPPER || '').length > 40);
 
 console.log('Inicio de sesión');
 check('health responde sin sesión', call('sys.health').ok === true);
-let r = call('auth.login', { idToken: google('desconocido@ejemplo.com') });
-check('rechaza correo no dado de alta', !r.ok && r.error.code === 'NO_AUTORIZADO', r);
-r = call('auth.login', { idToken: google('admin@ejemplo.com', { aud: 'otro-cliente' }) });
-check('rechaza token de otra aplicación', !r.ok && r.error.code === 'AUTH', r);
-r = call('auth.login', { idToken: google('admin@ejemplo.com', { email_verified: 'false' }) });
-check('rechaza correo no verificado', !r.ok && r.error.code === 'AUTH');
-r = call('auth.login', { idToken: google('ADMIN@ejemplo.com') });
-check('administrador entra (sin importar mayúsculas)', r.ok && r.data.me.rol === 'adm', r);
+let r = call('auth.requestCode', { correo: 'desconocido@ejemplo.com' });
+check('correo no dado de alta: misma respuesta y no se envía correo', r.ok && /Si tu correo/.test(r.data.mensaje) && mails.length === 0, r);
+r = call('auth.requestCode', { correo: 'no-es-correo' });
+check('valida el formato del correo', !r.ok && r.error.code === 'VALIDACION');
+r = call('auth.requestCode', { correo: 'ADMIN@ejemplo.com' });
+check('envía el código al correo dado de alta', r.ok && mails.length === 1 && mails[0].to === 'admin@ejemplo.com' && /^\d{6}$/.test(codeFor('admin@ejemplo.com')));
+const good = codeFor('admin@ejemplo.com');
+const bad = good === '000000' ? '111111' : '000000';
+r = call('auth.verifyCode', { correo: 'admin@ejemplo.com', codigo: bad });
+check('código incorrecto dice cuántos intentos quedan', !r.ok && /quedan 4 intentos/.test(r.error.message), r);
+check('el código no se guarda en texto en la caché', !JSON.stringify(cache).includes(good));
+r = call('auth.verifyCode', { correo: 'Admin@Ejemplo.com', codigo: good, recordar: true });
+check('administrador entra con el código (sin importar mayúsculas)', r.ok && r.data.me.rol === 'adm', r);
+const reuse = call('auth.verifyCode', { correo: 'admin@ejemplo.com', codigo: good });
+check('el código solo sirve una vez', !reuse.ok && /venció o ya se usó/.test(reuse.error.message));
 const adm = r.data.session;
 check('token de sesión largo (≥ 43 caracteres)', adm.length >= 43);
 const sesSheet = main.getSheetByName('SYS_Sesiones').data;
@@ -70,7 +81,7 @@ r = call('admin.users.save', { correo: 'f@ejemplo.com', nombre: '=IMPORTXML("x")
 const stored = main.getSheetByName('SYS_Usuarios').data.find(x => x[1] === 'f@ejemplo.com');
 check('nombre con "=" se guarda como texto, no como fórmula', r.ok && stored[2].startsWith("'="), stored);
 
-r = call('auth.login', { idToken: google('enf.juv@ejemplo.com'), compartido: false }, null);
+r = login('enf.juv@ejemplo.com', true);
 const enf = r.data.session;
 check('Enfermería ve solo sus plantas', r.ok && JSON.stringify(r.data.me.plantas) === '["PLT-JUV","PLT-BAR"]', r.data && r.data.me);
 check('Enfermería no ve Configuración', !r.data.me.pantallas.includes('configuracion'));
@@ -99,27 +110,41 @@ r = call('admin.users.save', Object.assign({}, me, { activo: 'NO' }), adm, rid()
 check('el admin no puede desactivarse a sí mismo', !r.ok && r.error.code === 'VALIDATION');
 
 console.log('Sesiones');
-const tab = call('auth.login', { idToken: google('ser@ejemplo.com'), compartido: true }).data.session;
-advance(9 * 60e3);
-check('tablet: sigue activa a los 9 min', call('auth.me', {}, tab).ok);
-advance(9 * 60e3);
-check('tablet: el uso reinicia el contador (18 min, con actividad)', call('auth.me', {}, tab).ok);
+call('auth.requestCode', { correo: 'ser@ejemplo.com' });
+let last;
+for (let i = 0; i < 5; i++) last = call('auth.verifyCode', { correo: 'ser@ejemplo.com', codigo: codeFor('ser@ejemplo.com') === '999999' ? '888888' : '999999' });
+check('5 intentos fallidos anulan el código', !last.ok && /Demasiados intentos/.test(last.error.message));
+check('después de bloquearse, ni el código correcto sirve', !call('auth.verifyCode', { correo: 'ser@ejemplo.com', codigo: codeFor('ser@ejemplo.com') }).ok);
+advance(3600e3);
+call('auth.requestCode', { correo: 'ser@ejemplo.com' });
 advance(11 * 60e3);
-r = call('auth.me', {}, tab);
-check('tablet: se cierra tras 10 min sin uso', !r.ok && /10 minutos/.test(r.error.message), r);
-check('tablet: queda revocada en la hoja', main.getSheetByName('SYS_Sesiones').data.some(x => x[3] === 'SI' && x[7] === 'SI'));
-const desk = call('auth.login', { idToken: google('ser@ejemplo.com') }).data.session;
+r = call('auth.verifyCode', { correo: 'ser@ejemplo.com', codigo: codeFor('ser@ejemplo.com') });
+check('el código vence a los 10 minutos', !r.ok && /venció/.test(r.error.message));
+for (let i = 0; i < 4; i++) call('auth.requestCode', { correo: 'ser@ejemplo.com' });
+r = call('auth.requestCode', { correo: 'ser@ejemplo.com' });
+check('máximo 5 códigos por hora por correo', !r.ok && r.error.code === 'LIMITE', r);
+advance(3600e3);
+const tab = login('ser@ejemplo.com', false).data.session;
+advance(5 * 3600e3);
+check('sin "Recordar": sigue activa a las 5 h', call('auth.me', {}, tab).ok);
+advance(1.1 * 3600e3);
+check('sin "Recordar": vence a las 6 h', !call('auth.me', {}, tab).ok);
+const q = mailQuota.n; mailQuota.n = 0;
+r = call('auth.requestCode', { correo: 'ser@ejemplo.com' });
+check('sin cuota de correo avisa claro', !r.ok && r.error.code === 'CUOTA');
+mailQuota.n = q;
+const desk = login('ser@ejemplo.com', true).data.session;
 advance(29 * 86400e3);
 for (const k of Object.keys(cache)) delete cache[k];
-check('escritorio: sigue activa a los 29 días (aunque se vacíe la caché)', call('auth.me', {}, desk).ok);
+check('Recordar equipo: sigue activa a los 29 días (aunque se vacíe la caché)', call('auth.me', {}, desk).ok);
 advance(2 * 86400e3);
-check('escritorio: vence a los 30 días', !call('auth.me', {}, desk).ok);
-const d2 = call('auth.login', { idToken: google('ser@ejemplo.com') }).data.session;
+check('Recordar equipo: vence a los 30 días', !call('auth.me', {}, desk).ok);
+const d2 = login('ser@ejemplo.com', true).data.session;
 check('cerrar sesión', call('auth.logout', {}, d2).ok && !call('auth.me', {}, d2).ok);
 
 console.log('Bitácora');
 const logRows = books[props.LOG_ID].getSheetByName('SYS_Bitacora').data;
-check('registra inicios de sesión y cambios de usuarios', logRows.some(x => x[3] === 'login') && logRows.some(x => x[3] === 'usuario.crear') && logRows.some(x => x[3] === 'login.rechazado'));
+check('registra inicios de sesión y cambios de usuarios', logRows.some(x => x[3] === 'login') && logRows.some(x => x[3] === 'usuario.crear') && logRows.some(x => x[3] === 'login.codigo.rechazado') && logRows.some(x => x[3] === 'login.codigo.incorrecto'));
 
 console.log(`\n${pass} correctas, ${fail} fallidas`);
 process.exit(fail ? 1 : 0);

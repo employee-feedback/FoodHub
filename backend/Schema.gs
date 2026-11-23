@@ -11,7 +11,7 @@ var STD = ['creado_en', 'creado_por', 'actualizado_en', 'actualizado_por', 'vers
 var SCHEMA = {
   // ---- Sistema ----
   SYS_Usuarios:      ['usuario_id', 'correo', 'nombre', 'rol', 'plantas'],
-  SYS_Sesiones:      ['sesion_id', 'usuario_id', 'token_hash', 'compartido', 'emitida', 'vence', 'ultimo_uso', 'revocada', 'dispositivo'],
+  SYS_Sesiones:      ['sesion_id', 'usuario_id', 'token_hash', 'recordar', 'emitida', 'vence', 'ultimo_uso', 'revocada', 'dispositivo'],
   SYS_Idempotencia:  ['request_id', 'accion', 'usuario_id', 'resultado', 'expira'],
   SYS_Contadores:    ['contador_id', 'valor'],
   SYS_Notificaciones:['notificacion_id', 'clave', 'plantilla', 'destinatarios', 'entidad', 'entidad_id', 'programada', 'enviada', 'estado', 'error'],

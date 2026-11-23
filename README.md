@@ -11,7 +11,7 @@ Plataforma de evaluación y seguimiento del concesionario de comedor para las pl
 
 ## Estado
 
-Fase 4: inicio de sesión con Google, sesiones (30 días en escritorio, 10 minutos sin uso en tablet), usuarios, roles y plantas autorizadas, catálogos y bitácora.
+Fase 4: inicio de sesión con código de 6 dígitos al correo, como TalentHub ("Recordar este equipo" 30 días; sin marcar, 6 horas), usuarios, roles y plantas autorizadas, catálogos y bitácora.
 
 ## Pruebas locales
 

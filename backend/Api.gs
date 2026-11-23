@@ -12,7 +12,8 @@
 var ROUTES = {
   // acción: [permiso | null (pública) | 'session' (cualquier sesión válida), función, ¿escritura idempotente?]
   'sys.health':        [null, apiHealth_, false],
-  'auth.login':        [null, apiLogin_, false],
+  'auth.requestCode':  [null, function (p) { return requestCode_(p.correo); }, false],
+  'auth.verifyCode':   [null, function (p) { return verifyCode_(p.correo, p.codigo, p.recordar, p.dispositivo); }, false],
   'auth.logout':       ['session', function (u) { return logout_(u); }, false],
   'auth.me':           ['session', function (u) { return profile_(u); }, false],
   'catalog.get':       ['catalogo.ver', apiCatalog_, false],
@@ -85,11 +86,7 @@ function json_(obj) {
 // ---------- acciones ----------
 
 function apiHealth_() {
-  return { app: APP.NAME, version: APP.VERSION, time: nowIso_(), configured: !!prop_('DB_ID') && !!prop_('GOOGLE_CLIENT_ID') };
-}
-
-function apiLogin_(payload) {
-  return login_(payload.idToken, payload.compartido === true, payload.dispositivo);
+  return { app: APP.NAME, version: APP.VERSION, time: nowIso_(), configured: !!prop_('DB_ID') };
 }
 
 /** Catálogos filtrados por las plantas del usuario. */
