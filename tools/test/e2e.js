@@ -65,7 +65,8 @@ const check = (n, c) => { if (c) { pass++; console.log('  ok   ' + n); } else { 
   await signIn(pg, 'admin@ejemplo.com');
   await pg.waitForSelector('.nav');
   check('entra y ve las 8 pantallas', (await pg.$$('.nav a')).length === 8);
-  check('inicio muestra 41 servicios del catálogo', (await pg.textContent('#view')).includes('41'));
+  check('inicio no muestra cifras inventadas', !/\d/.test(await pg.$$eval('.kpi .v', e => e.map(x => x.textContent).join(''))));
+  check('sin referencias a fases ni versión', !/Fase \d|v0\./.test(await pg.textContent('#root')));
   await pg.click('a[href="#configuracion"]');
   await pg.waitForSelector('#uf');
   await pg.fill('#u-co', 'enf.juv@ejemplo.com');
