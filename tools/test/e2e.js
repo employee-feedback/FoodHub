@@ -20,7 +20,7 @@ const server = http.createServer((req, res) => {
   const f = path.join(FRONT, p);
   if (!f.startsWith(FRONT) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
   let body = fs.readFileSync(f);
-  if (p === '/config.js') body = Buffer.from(String(body).replace('PEGAR_AQUI_URL_EXEC', API));
+  if (p === '/config.js') body = Buffer.from(String(body).replace(/API_URL: '[^']*'/, "API_URL: '" + API + "'"));
   const type = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }[path.extname(f)] || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': type + '; charset=utf-8' });
   res.end(body);
