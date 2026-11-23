@@ -6,12 +6,13 @@
  *   DB_ID              ID de la hoja de cálculo principal (lo escribe setup()).
  *   LOG_ID             ID de la hoja de bitácora (lo escribe setup()).
  *   PEPPER             Secreto aleatorio para hashear tokens (lo escribe setup(); no compartir).
+ *   EVID_FOLDER_ID     Carpeta privada de Drive para evidencias (la crea setup()).
  *   ALLOWED_ORIGIN     Opcional. URL de GitHub Pages; solo informativo en /health.
  */
 
 var APP = {
   NAME: 'FoodHub',
-  VERSION: '0.4.1',
+  VERSION: '0.5.0',
   TZ: 'America/Chihuahua',
   SESSION_REMEMBER_DAYS: 30,          // "Recordar este equipo" (como TalentHub)
   SESSION_HOURS: 6,                   // sin recordar, por ejemplo la tablet compartida

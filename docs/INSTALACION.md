@@ -1,4 +1,4 @@
-# FoodHub – Guía de instalación (Fase 4)
+# FoodHub – Guía de instalación
 
 Tiempo estimado: 15 a 20 minutos. Todo se hace con la **cuenta Gmail de FoodHub**, no con una cuenta personal.
 
@@ -69,9 +69,22 @@ Cada vez que cambie el código de Apps Script:
 2. Si cambió `Schema.gs` o `Seed.gs`, ejecuta `setup()` otra vez. Solo agrega lo que falte; nunca borra datos.
 3. **Implementar > Gestionar implementaciones > Editar (lápiz) > Versión: Nueva versión > Implementar.** La URL `/exec` se mantiene.
 
+### Actualización de incidencias (versión 0.5.0)
+
+Esta actualización agrega el registro y seguimiento de incidencias y las fotos de evidencia.
+
+1. En Apps Script, **crea dos archivos de secuencia de comandos** (botón **+** > *Secuencia de comandos*): `Incidencias` y `Evidencias`. Pega en cada uno el contenido de `backend/Incidencias.gs` y `backend/Evidencias.gs`.
+2. **Reemplaza** el contenido de `Api.gs`, `Config.gs`, `Schema.gs` y `Setup.gs` con los de esta versión.
+3. Reemplaza `appsscript.json` (si no lo ves: *Configuración del proyecto* > marca *Mostrar el archivo de manifiesto "appsscript.json"*). Ahora incluye el permiso de Google Drive.
+4. Elige la función `setup` y **Ejecutar**. Google pedirá autorizar el acceso a Drive: *Revisar permisos* > tu cuenta FoodHub > *Configuración avanzada* > *Ir a FoodHub* > *Permitir*. En el registro debe aparecer **Carpeta de evidencias creada** y **Columnas agregadas en TRX_Incidencias**.
+5. **Implementar > Gestionar implementaciones > Editar > Versión: Nueva versión > Implementar.**
+6. Abre la URL `/exec`: debe decir `"version":"0.5.0"`.
+
+La carpeta **FoodHub – Evidencias** queda en el Drive de la cuenta FoodHub. **No la compartas**: las fotos solo deben verse desde FoodHub, que revisa la sesión y la planta de quien las pide.
+
 ## Reglas de seguridad
 
-- No compartas la hoja **FoodHub – Base de datos** con nadie. Quien pueda editarla se salta las validaciones y la bitácora.
+- No compartas la hoja **FoodHub – Base de datos** ni la carpeta **FoodHub – Evidencias** con nadie. Quien pueda editarla se salta las validaciones y la bitácora.
 - No copies la propiedad `PEPPER` fuera del proyecto. Si se filtra, bórrala y ejecuta `setup()`: se genera otra y todas las sesiones se cierran.
 - Para quitar el acceso a alguien, desactívalo en **Configuración > Usuarios**. Sus sesiones se cierran de inmediato.
 - `config.js` solo contiene datos públicos. Nunca pongas contraseñas ni claves ahí.

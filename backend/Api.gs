@@ -20,7 +20,15 @@ var ROUTES = {
   'admin.users.list':  ['usuarios.administrar', apiUsersList_, false],
   'admin.users.save':  ['usuarios.administrar', apiUsersSave_, true],
   'admin.sessions.revokeUser': ['usuarios.administrar', apiRevokeUser_, true],
-  'admin.log.list':    ['bitacora.ver', apiLogList_, false]
+  'admin.log.list':    ['bitacora.ver', apiLogList_, false],
+  'inc.create':        ['incidencia.crear', apiIncCreate_, true],
+  'inc.list':          ['incidencia.ver', apiIncList_, false],
+  'inc.get':           ['incidencia.ver', apiIncGet_, false],
+  'inc.summary':       ['incidencia.ver', apiIncSummary_, false],
+  'inc.action':        ['incidencia.ver', apiIncAction_, true],      // cada acción revisa su propio permiso
+  'inc.evidence.add':  ['evidencia.subir', apiEvidAdd_, true],
+  'inc.evidence.get':  ['incidencia.ver', apiEvidGet_, false],
+  'inc.evidence.retire': ['incidencia.ver', apiEvidRetire_, true]
 };
 
 function doGet() {
@@ -105,7 +113,9 @@ function apiCatalog_(user) {
     criterios: cachedAll_('CAT_Criterios').filter(active).map(strip_),
     auditoriaSecciones: cachedAll_('AUD_Secciones').filter(active).map(strip_),
     auditoriaPuntos: cachedAll_('AUD_Puntos').filter(active).map(strip_),
-    indicadores: cachedAll_('IND_Indicadores').filter(active).map(strip_)
+    indicadores: cachedAll_('IND_Indicadores').filter(active).map(strip_),
+    campos: TIPO_CAMPOS,
+    comensalesObligatorios: COMENSALES_OBLIGATORIOS
   };
 }
 

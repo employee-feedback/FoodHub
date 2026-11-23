@@ -32,6 +32,14 @@ function setup() {
     if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
   });
 
+  var folderId = props.getProperty('EVID_FOLDER_ID');
+  if (!folderId) {
+    var folder = DriveApp.createFolder('FoodHub – Evidencias');
+    folder.setDescription('Evidencias de incidencias de FoodHub. No compartir: los archivos solo se ven desde FoodHub.');
+    props.setProperty('EVID_FOLDER_ID', folder.getId());
+    report.push('Carpeta de evidencias creada: ' + folder.getUrl());
+  }
+
   var admin = (props.getProperty('ADMIN_EMAIL') || '').trim().toLowerCase();
   if (admin && !findBy_('SYS_Usuarios', 'correo', admin)) {
     insert_('SYS_Usuarios', { usuario_id: uid_('USR'), correo: admin, nombre: 'Administrador', rol: 'adm', plantas: '*', activo: 'SI' }, 'setup');

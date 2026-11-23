@@ -17,14 +17,15 @@ var SCHEMA = {
   SYS_Notificaciones:['notificacion_id', 'clave', 'plantilla', 'destinatarios', 'entidad', 'entidad_id', 'programada', 'enviada', 'estado', 'error'],
   SYS_SyncEncuesta:  ['sync_id', 'inicio', 'fin', 'leidas', 'nuevas', 'actualizadas', 'faltantes', 'estado', 'error'],
 
-  // ---- Transacciones (se usan desde la Fase 5) ----
-  TRX_Incidencias:         ['folio', 'planta_id', 'servicio_id', 'tipo_id', 'categoria_id', 'reporta_usuario_id', 'detectada', 'registrada', 'notificada', 'primera_respuesta', 'solucion_reportada', 'solucion_verificada', 'cerrada', 'estado', 'critica', 'comensales_afectados', 'descripcion', 'datos', 'auditoria_respuesta_id'],
+  // ---- Transacciones ----
+  TRX_Incidencias:         ['folio', 'planta_id', 'servicio_id', 'tipo_id', 'categoria_id', 'reporta_usuario_id', 'detectada', 'registrada', 'notificada', 'primera_respuesta', 'solucion_reportada', 'solucion_verificada', 'cerrada', 'estado', 'critica', 'comensales_afectados', 'descripcion', 'datos', 'auditoria_respuesta_id',
+                            'dia_operativo', 'turno', 'tipo_original', 'cerrada_por', 'nota_cierre', 'cancelada', 'cancelada_por', 'motivo_cancelacion'],
   TRX_HistorialIncidencia: ['historial_id', 'folio', 'fecha', 'actor', 'accion', 'campo', 'antes', 'despues'],
   TRX_EventosAfectacion:   ['evento_id', 'folio', 'inicio', 'fin', 'puesto_id', 'faltantes', 'comensales_afectados'],
   TRX_RespuestasProveedor: ['respuesta_id', 'folio', 'fecha', 'tipo', 'causa', 'accion', 'responsable', 'texto'],
   TRX_Compromisos:         ['compromiso_id', 'folio', 'numero', 'fecha_compromiso', 'estado', 'solicitado', 'resuelto_por', 'resuelto_en', 'motivo'],
   TRX_TokensAcceso:        ['token_id', 'folio', 'token_hash', 'emitido', 'vence', 'revocado', 'usos', 'ultimo_uso'],
-  TRX_Evidencias:          ['evidencia_id', 'entidad', 'entidad_id', 'archivo_id', 'nombre', 'tipo', 'bytes', 'visible_proveedor'],
+  TRX_Evidencias:          ['evidencia_id', 'entidad', 'entidad_id', 'archivo_id', 'nombre', 'tipo', 'bytes', 'visible_proveedor', 'retirada', 'motivo_retiro'],
 
   // ---- Auditoría ----
   AUD_Programacion: ['programacion_id', 'planta_id', 'periodo', 'fecha', 'responsable_enfermeria', 'responsable_servicios', 'contacto_proveedor', 'estado'],
@@ -47,10 +48,11 @@ var LOG_SCHEMA = { SYS_Bitacora: ['bitacora_id', 'fecha', 'actor', 'accion', 'en
 var ROLES = {
   adm: { nombre: 'Administrador', permisos: ['*'] },
   enf: { nombre: 'Enfermería', permisos: [
-    'catalogo.ver', 'incidencia.crear', 'incidencia.ver', 'incidencia.afectacion',
+    'catalogo.ver', 'incidencia.crear', 'incidencia.ver', 'incidencia.afectacion', 'incidencia.nota', 'incidencia.cancelar',
     'auditoria.realizar', 'evidencia.subir', 'solucion.verificar', 'evaluacion.ver', 'reporte.ver'] },
   ser: { nombre: 'Servicios', permisos: [
-    'catalogo.ver', 'incidencia.crear', 'incidencia.ver', 'incidencia.afectacion', 'incidencia.cerrar',
+    'catalogo.ver', 'incidencia.crear', 'incidencia.ver', 'incidencia.afectacion', 'incidencia.nota', 'incidencia.cancelar',
+    'incidencia.reclasificar', 'incidencia.cerrar',
     'auditoria.realizar', 'auditoria.programar', 'compromiso.revisar', 'prorroga.aprobar', 'solucion.validar',
     'enlace.revocar', 'evidencia.subir', 'solucion.verificar', 'evaluacion.ver', 'reporte.ver', 'config.responsables'] }
 };

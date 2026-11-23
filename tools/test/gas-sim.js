@@ -48,6 +48,8 @@ function makeBook(name) {
   return b;
 }
 
+const drive = {};   // archivos guardados en la "carpeta" simulada
+const folders = {};
 const props = {};
 const cache = {};
 const mails = [];   // correos enviados
@@ -68,7 +70,18 @@ const ctx = {
     DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
     computeDigest: (alg, s) => [...crypto.createHash(alg).update(s, 'utf8').digest()].map(b => (b > 127 ? b - 256 : b)),
     base64EncodeWebSafe: bytes => Buffer.from(bytes.map(b => b & 0xff)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
-    formatDate: d => new RealDate(d.getTime() - 6 * 3600e3).toISOString().slice(0, 19) + '-06:00'
+    formatDate: d => new RealDate(d.getTime() - 6 * 3600e3).toISOString().slice(0, 19) + '-06:00',
+    parseDate: s => new RealDate(s + ':00-06:00'),
+    base64Decode: s => { if (!/^[A-Za-z0-9+/=\s]*$/.test(s)) throw new Error('bad'); return [...Buffer.from(s, 'base64')].map(b => (b > 127 ? b - 256 : b)); },
+    base64Encode: bytes => Buffer.from(bytes.map(b => b & 0xff)).toString('base64'),
+    newBlob: (bytes, mime, name) => ({ bytes, mime, name, getBytes: () => bytes })
+  },
+  DriveApp: {
+    createFolder: name => { const id = 'fld_' + Object.keys(folders).length; const f = { id, name, getId: () => id, getUrl: () => 'https://drive.google.com/drive/folders/' + id, setDescription() { return f; },
+      createFile: blob => { const fid = 'file_' + Object.keys(drive).length; drive[fid] = { ...blob, folder: id, shared: false }; return { getId: () => fid }; } };
+      folders[id] = f; return f; },
+    getFolderById: id => { if (!folders[id]) throw new Error('no folder'); return folders[id]; },
+    getFileById: id => { if (!drive[id]) throw new Error('no file'); return { getBlob: () => ({ getBytes: () => drive[id].bytes }) }; }
   },
   MailApp: {
     getRemainingDailyQuota: () => mailQuota.n,
@@ -78,7 +91,7 @@ const ctx = {
 };
 vm.createContext(ctx);
 const dir = path.join(__dirname, '..', '..', 'backend');
-for (const f of ['Config.gs', 'Schema.gs', 'Db.gs', 'Auth.gs', 'Bitacora.gs', 'Api.gs', 'Setup.gs', 'Seed.gs']) {
+for (const f of ['Config.gs', 'Schema.gs', 'Db.gs', 'Auth.gs', 'Bitacora.gs', 'Incidencias.gs', 'Evidencias.gs', 'Api.gs', 'Setup.gs', 'Seed.gs']) {
   vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });
 }
 
@@ -92,4 +105,4 @@ function post(body) {
   vm.runInContext('DB_CACHE_ = {main: DB_CACHE_.main, log: DB_CACHE_.log}', ctx);
   return ctx.doPost({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).content;
 }
-module.exports = { ctx, vm, books, props, cache, mails, mailQuota, codeFor, post, advance: ms => { clockOffset += ms; } };
+module.exports = { ctx, vm, books, props, drive, folders, cache, mails, mailQuota, codeFor, post, advance: ms => { clockOffset += ms; } };
